@@ -20,7 +20,7 @@ idiot_msg:
 	idiot_len = . - idiot_msg
 
 restart_msg:
-	.asciz "Do you want to see the info of another character? (y/n): "
+	.asciz "\nDo you wish to be enlightened again? (y/n): "
 	restart_len = . - restart_msg
 
 cls_msg:
@@ -34,6 +34,8 @@ cls_msg:
 .section .text
 
 print_options:
+	call cls
+	
 	movq $1, %rax
 	movq $1, %rdi
 	lea start_msg(%rip), %rsi
@@ -58,10 +60,11 @@ trim_nl_input:
 	
 	movb (%r10,%r8,1), %r9b
 	cmpb $0x0A, %r9b
-	jne compare_everything
+	jne input_return
 	movb $0, (%r10,%r8,1)
 	dec %r8
-
+	
+input_return:
 	ret
 
 trim_nl_restart:
@@ -71,14 +74,14 @@ trim_nl_restart:
 	
 	movb (%r10,%r8,1), %r9b
 	cmpb $0x0A, %r9b
-	jne return
+	jne restart_return
 	movb $0, (%r10,%r8,1)
-	dec %r8
 
-return:
+restart_return:
 	ret
 
 compare_everything:
+	call cls
 	
 	cmpb $'1', (%r10)
 	je frodo_info
@@ -151,7 +154,7 @@ cls:
 restart_check:
 	movq $1, %rax
 	movq $1, %rdi
-	lea restart_msg, %rsi
+	lea restart_msg(%rip), %rsi
 	movq $restart_len, %rdx
 	syscall
 	
@@ -171,15 +174,19 @@ exit:
 	.globl _start
 _start:
 loop:
-	call cls
 	call print_options
 	call get_options
-	call cls
+	
 	call trim_nl_input
+	call compare_everything
+	
 	call restart_check
 	call trim_nl_restart
-
+	
+	lea restart_input(%rip), %r10
 	cmpb $'y', (%r10)
+	je loop
+	cmpb $'Y', (%r10)
 	je loop
 	
 	call exit

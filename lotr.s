@@ -19,12 +19,17 @@ idiot_msg:
 	.asciz "TYPE ONE OF THE GOD DAMN NUMBERS!!!!!!\n"
 	idiot_len = . - idiot_msg
 
+restart_msg:
+	.asciz "Do you want to see the info of another character? (y/n): "
+	restart_len = . - restart_msg
+
 cls_msg:
 	.asciz "\033[H\033[2J"
 	cls_len = . - cls_msg
 
 .section .bss
 	.lcomm input, 16
+	.lcomm restart_input, 16
 
 .section .text
 
@@ -46,9 +51,9 @@ get_options:
 
 	ret
 
-trim_nl:
+trim_nl_input:
 	lea input(%rip), %r10
-	mov %rax, %r8 # len of 'input'
+	movq %rax, %r8 # len of 'input'
 	dec %r8       # dec by 1 bc last is '\n'
 	
 	movb (%r10,%r8,1), %r9b
@@ -56,6 +61,22 @@ trim_nl:
 	jne compare_everything
 	movb $0, (%r10,%r8,1)
 	dec %r8
+
+	ret
+
+trim_nl_restart:
+	lea restart_input(%rip), %r10
+	movq %rax, %r8
+	dec %r8
+	
+	movb (%r10,%r8,1), %r9b
+	cmpb $0x0A, %r9b
+	jne return
+	movb $0, (%r10,%r8,1)
+	dec %r8
+
+return:
+	ret
 
 compare_everything:
 	
@@ -127,6 +148,20 @@ cls:
 	
 	ret
 
+restart_check:
+	movq $1, %rax
+	movq $1, %rdi
+	lea restart_msg, %rsi
+	movq $restart_len, %rdx
+	syscall
+	
+	movq $0, %rax
+	movq $0, %rdi
+	lea restart_input(%rip), %rsi
+	movq $16, %rdx
+	syscall
+	
+	ret
 exit:
 	movq $60, %rax
 	xorq %rdi, %rdi
@@ -135,10 +170,16 @@ exit:
 
 	.globl _start
 _start:
+loop:
 	call cls
 	call print_options
 	call get_options
 	call cls
-	call trim_nl
-	call exit
+	call trim_nl_input
+	call restart_check
+	call trim_nl_restart
 
+	cmpb $'y', (%r10)
+	je loop
+	
+	call exit

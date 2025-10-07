@@ -1,6 +1,6 @@
 .section .data
 options_msg:
-	.asciz "Who do you want info about?\n1. Frodo\n2. Sam\n3. Gandalf\n4. Big eye man\n"
+	.asciz "Who do you want info about?\n1. Frodo\n2. Sam\n3. Gandalf\n4. Big eye man\n5. Bilbo\n6. Gollum\n"
 	options_len = . - options_msg
 frodo_msg:
 	.asciz "Frodo.\nShort man. Furry feet (Secretly a furry). Looks 50 and 12. Short Irish bloke.\n"
@@ -9,12 +9,17 @@ sam_msg:
 	.asciz "Sam (AKA. Fat Dude).\nAlso of the Short man genus, accompanied by the furry feet. Is blonde and has maybe had a few too many breakfastses. Also a short Irish bloke.\n"
         sam_len = . - sam_msg
 gandalf_msg:
-	.asciz "Gandalf.\nNOT a short man, a big... Normal sized man I think, he likes to play around and say 'YOU SHALL NOT PASS!!!!' I'm pretty sure, also I think his beard looks pretty cool.\n"
+	.asciz "Gandalf.\nNOT a short man, a big... Normal sized man I think, he likes to play around and say 'YOU SHALL NOT PASS!!' I'm pretty sure, also I think his beard looks pretty cool.\n"
 	gandalf_len = . - gandalf_msg
-
 sauron_msg:
-	.asciz "Sauron.\nBIG EYE MAN. he's just this big plague infested eye, his name is SIIICCK though. Idk what an eye can do though, I feel like it would just self destruct.\n"
+	.asciz "Sauron.\nBIG EYE MAN. he's just this big plague infested eye, his name is SIIICCK though. I don't know what an eye can do though, I feel like it would just self destruct.\n"
 	sauron_len = . - sauron_msg
+bilbo_msg:
+	.asciz "Bilbo.\nDumbass name; \"ooo my name is Bilbo\", man SHUT UP!!! I don't even know what he looks like, like an old greasy man I think. And he has some ring that he probably stole.\n"
+	bilbo_len = . - bilbo_msg
+gollum_msg:
+	.asciz "Gollum.\nHim and Dobby scared the shit out of me when I was younger. He looks like if a pug became human: Slimy as hell and MASSIVE eyes.\nAh also, his game sucks\n"
+	gollum_len = . - gollum_msg
 idiot_msg:
 	.asciz "TYPE ONE OF THE GOD DAMN NUMBERS!!!!!!\n"
 	idiot_len = . - idiot_msg
@@ -81,6 +86,12 @@ check_options:
 	cmpb $'4', (%r10)
 	je sauron_call
 
+	cmpb $'5', (%r10)
+	je bilbo_call
+	
+	cmpb $'6', (%r10)
+	je gollum_call
+
 	jmp idiot_call
 	
 frodo_call:
@@ -98,11 +109,15 @@ gandalf_call:
 sauron_call:
 	call sauron_stuff
 	ret
+bilbo_call:
+	call bilbo_stuff
+	ret
+gollum_call:
+	call gollum_stuff
+	ret
 
 idiot_call:
 	call idiot_stuff
-	ret
-
 	ret
 
 frodo_stuff:
@@ -140,6 +155,23 @@ sauron_stuff:
 	syscall
 
 	ret
+bilbo_stuff:
+	movq $1, %rax
+	movq $1, %rdi
+	lea bilbo_msg(%rip), %rsi
+	movq $bilbo_len, %rdx
+	syscall
+
+	ret
+
+gollum_stuff:
+	movq $1, %rax
+	movq $1, %rdi
+	lea gollum_msg(%rip), %rsi
+	movq $gollum_len, %rdx
+	syscall
+
+	ret
 
 idiot_stuff:
 	movq $1, %rax
@@ -159,6 +191,7 @@ restart_stuff:
 
 	movq $0, %rax
 	movq $0, %rdi
+
 	lea restart_input(%rip), %rsi
 	movq $16, %rdx
 	syscall

@@ -24,9 +24,12 @@ idiot_msg:
 	.asciz "TYPE ONE OF THE GOD DAMN NUMBERS!!!!!!\n"
 	idiot_len = . - idiot_msg
 
-restart_msg:
+nice_restart_msg:
 	.asciz "Do you wish to be enlightened once more? (y/n): "
-	restart_len = . - restart_msg
+	nice_restart_len = . - nice_restart_msg
+idiot_restart_msg:
+	.asciz "God DAMN it, wanna try again you absolute idiot?! (y/n): "
+	idiot_restart_len = . - idiot_restart_msg
 
 cls_msg:
 	.asciz "\033[H\033[2J"
@@ -34,7 +37,8 @@ cls_msg:
 
 .section .bss
 	.lcomm options_input, 16
-	.lcomm restart_input, 16
+	.lcomm nice_restart_input, 16
+	.lcomm idiot_restart_input, 16
 
 .section .text
 print_options:
@@ -180,37 +184,69 @@ idiot_stuff:
 	movq $idiot_len, %rdx
 	syscall
 
-	ret
+	call idiot_restart_stuff
 
-restart_stuff:
+nice_restart_stuff:
 	movq $1, %rax
 	movq $1, %rdi
-	lea restart_msg(%rip), %rsi
-	movq $restart_len, %rdx
+	lea nice_restart_msg(%rip), %rsi
+	movq $nice_restart_len, %rdx
 	syscall
 
 	movq $0, %rax
 	movq $0, %rdi
 
-	lea restart_input(%rip), %rsi
+	lea nice_restart_input(%rip), %rsi
 	movq $16, %rdx
 	syscall
 	movq %rax, %r8
 
 	ret
-trim_restart_nl:
-	lea restart_input(%rip), %r10
+nice_trim_restart_nl:
+	lea nice_restart_input(%rip), %r10
 	dec %r8 # r8 = \0; - 1 r8 = last_char
 	
 	movb (%r10,%r8,1), %r9b
 	cmpb $0x0A, %r9b
-	jne finished
+	jne nice_finished
 	
 	movb $0, %r9b
 
-finished:
+nice_finished:
+	jmp nice_restart_check
 	ret
 
+idiot_restart_stuff:
+	movq $1, %rax
+	movq $1, %rdi
+	lea idiot_restart_msg(%rip), %rsi
+	movq $idiot_restart_len, %rdx
+	syscall
+	
+	movq $0, %rax
+	movq $0, %rdi
+	lea idiot_restart_input(%rip), %rsi
+	movq $16, %rdx
+	syscall
+	movq %rax, %r8
+
+	call idiot_trim_restart_nl
+	ret
+
+idiot_trim_restart_nl:
+	lea idiot_restart_input(%rip), %r10
+	dec %r8
+
+	movb (%r10,%r8,1), %r9b
+	cmpb $0x0A, %r9b
+	jmp idiot_finished
+
+	movb $0, %r9b
+	
+idiot_finished:
+	jmp idiot_restart_check
+	ret
+	
 cls:
 	movq $1, %rax
 	movq $1, %rdi
@@ -233,11 +269,11 @@ loop:
 	call get_options
 	call trim_options_nl
 
-	call restart_stuff
-	call trim_restart_nl
+	call nice_restart_stuff
+	call nice_trim_restart_nl
 
-restart_check:
-	lea restart_input(%rip), %r10
+nice_restart_check:
+	lea nice_restart_input(%rip), %r10
 	cmpb $'y', (%r10)
 	je restart
 	cmpb $'Y', (%r10)
@@ -248,15 +284,34 @@ restart_check:
 	cmpb $'N', (%r10)
 	je exit
 
-	jmp dumbass
+	jmp nice_dumbass
 
-dumbass:
-	call restart_stuff
-	call trim_restart_nl
-	jmp restart_check
-	
+idiot_restart_check:
+	lea idiot_restart_input(%rip), %r10
+        cmpb $'y', (%r10)
+        je restart
+        cmpb $'Y', (%r10)
+        je restart
+
+        cmpb $'n', (%r10)
+        je exit
+        cmpb $'N', (%r10)
+        je exit
+
+        jmp idiot_dumbass
+
+nice_dumbass:
+	call nice_restart_stuff
+	call nice_trim_restart_nl
+	jmp nice_restart_check
+idiot_dumbass:
+	call idiot_restart_stuff
+	call idiot_trim_restart_nl
+	jmp idiot_restart_check
+
 restart:
 	jmp loop
 
 exit:
 	call end
+

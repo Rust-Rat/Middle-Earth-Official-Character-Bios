@@ -1,17 +1,17 @@
 .section .data
-
-start_msg:
-	.asciz "Who do you want info about?\n1. Frodo\n2. Fat dude\n3. Gandalf\n4. Big eye man\n"
-	start_len = . - start_msg
+options_msg:
+	.asciz "Who do you want info about?\n1. Frodo\n2. Sam\n3. Gandalf\n4. Big eye man\n"
+	options_len = . - options_msg
 frodo_msg:
 	.asciz "Frodo.\nShort man. Furry feet (Secretly a furry). Looks 50 and 12. Short Irish bloke.\n"
 	frodo_len = . - frodo_msg
-fatguy_msg:
-	.asciz "Fat Dude.\nAlso of the Short man genus, accompanied by the furry feet. Is blonde and has maybe had a few too many breakfastses. Also a short Irish bloke.\n"
-	fatguy_len = . - fatguy_msg
+sam_msg:
+	.asciz "Sam (AKA. Fat Dude).\nAlso of the Short man genus, accompanied by the furry feet. Is blonde and has maybe had a few too many breakfastses. Also a short Irish bloke.\n"
+        sam_len = . - sam_msg
 gandalf_msg:
 	.asciz "Gandalf.\nNOT a short man, a big... Normal sized man I think, he likes to play around and say 'YOU SHALL NOT PASS!!!!' I'm pretty sure, also I think his beard looks pretty cool.\n"
 	gandalf_len = . - gandalf_msg
+
 sauron_msg:
 	.asciz "Sauron.\nBIG EYE MAN. he's just this big plague infested eye, his name is SIIICCK though. Idk what an eye can do though, I feel like it would just self destruct.\n"
 	sauron_len = . - sauron_msg
@@ -20,7 +20,7 @@ idiot_msg:
 	idiot_len = . - idiot_msg
 
 restart_msg:
-	.asciz "\nDo you wish to be enlightened again? (y/n): "
+	.asciz "Do you wish to be enlightened once more? (y/n): "
 	restart_len = . - restart_msg
 
 cls_msg:
@@ -28,165 +28,202 @@ cls_msg:
 	cls_len = . - cls_msg
 
 .section .bss
-	.lcomm input, 16
+	.lcomm options_input, 16
 	.lcomm restart_input, 16
 
 .section .text
-
 print_options:
-	call cls
-	
 	movq $1, %rax
 	movq $1, %rdi
-	lea start_msg(%rip), %rsi
-	movq $start_len, %rdx
+	lea options_msg(%rip), %rsi
+	movq $options_len, %rdx
 	syscall
-	
+
 	ret
 
 get_options:
 	movq $0, %rax
 	movq $0, %rdi
-	lea input(%rip), %rsi
+	lea options_input(%rip), %rsi
 	movq $16, %rdx
 	syscall
+	movq %rax, %r8 # len for trim_options_nl
 
 	ret
 
-trim_nl_input:
-	lea input(%rip), %r10
-	movq %rax, %r8 # len of 'input'
-	dec %r8       # dec by 1 bc last is '\n'
-	
-	movb (%r10,%r8,1), %r9b
-	cmpb $0x0A, %r9b
-	jne input_return
-	movb $0, (%r10,%r8,1)
-	dec %r8
-	
-input_return:
-	ret
-
-trim_nl_restart:
-	lea restart_input(%rip), %r10
-	movq %rax, %r8
+trim_options_nl:
+	lea options_input(%rip), %r10
 	dec %r8
 	
 	movb (%r10,%r8,1), %r9b
 	cmpb $0x0A, %r9b
-	jne restart_return
-	movb $0, (%r10,%r8,1)
+	je call_check_options
+	
+	movb $0, %r9b
+	dec %r8
+	jmp call_check_options
 
-restart_return:
+call_check_options:
+	call check_options
+
 	ret
 
-compare_everything:
-	call cls
-	
+check_options:
 	cmpb $'1', (%r10)
-	je frodo_info
-	
+	je frodo_call
+
 	cmpb $'2', (%r10)
-	je fatguy_info
+	je sam_call
 	
 	cmpb $'3', (%r10)
-        je gandalf_info
-
-	cmpb $'4', (%r10)
-        je sauron_info
+	je gandalf_call
 	
-	jmp idiot_info
+	cmpb $'4', (%r10)
+	je sauron_call
 
-frodo_info:
+	jmp idiot_call
+	
+frodo_call:
+	call frodo_stuff
+	ret
+
+sam_call:
+	call sam_stuff
+	ret
+
+gandalf_call:
+	call gandalf_stuff
+	ret
+
+sauron_call:
+	call sauron_stuff
+	ret
+
+idiot_call:
+	call idiot_stuff
+	ret
+
+	ret
+
+frodo_stuff:
 	movq $1, %rax
 	movq $1, %rdi
 	lea frodo_msg(%rip), %rsi
 	movq $frodo_len, %rdx
 	syscall
+
+	ret
+
+sam_stuff:
+	movq $1, %rax
+	movq $1, %rdi
+	lea sam_msg(%rip), %rsi
+	movq $sam_len, %rdx
+	syscall
 	
 	ret
 
-fatguy_info:
+gandalf_stuff:
 	movq $1, %rax
-        movq $1, %rdi
-        lea fatguy_msg(%rip), %rsi
-        movq $fatguy_len, %rdx
-        syscall
+	movq $1, %rdi
+	lea gandalf_msg(%rip), %rsi
+	movq $gandalf_len, %rdx
+	syscall
+
+	ret
+
+sauron_stuff:
+	movq $1, %rax
+	movq $1, %rdi
+	lea sauron_msg(%rip), %rsi
+	movq $sauron_len, %rdx
+	syscall
+
+	ret
+
+idiot_stuff:
+	movq $1, %rax
+	movq $1, %rdi
+	lea idiot_msg(%rip), %rsi
+	movq $idiot_len, %rdx
+	syscall
+
+	ret
+
+restart_stuff:
+	movq $1, %rax
+	movq $1, %rdi
+	lea restart_msg(%rip), %rsi
+	movq $restart_len, %rdx
+	syscall
+
+	movq $0, %rax
+	movq $0, %rdi
+	lea restart_input(%rip), %rsi
+	movq $16, %rdx
+	syscall
+	movq %rax, %r8
+
+	ret
+trim_restart_nl:
+	lea restart_input(%rip), %r10
+	dec %r8 # r8 = \0; - 1 r8 = last_char
 	
-	ret
-
-gandalf_info:
-	movq $1, %rax
-        movq $1, %rdi
-        lea gandalf_msg(%rip), %rsi
-        movq $gandalf_len, %rdx
-        syscall
-
-	ret
-
-sauron_info:
-	movq $1, %rax
-        movq $1, %rdi
-        lea sauron_msg(%rip), %rsi
-        movq $sauron_len, %rdx
-        syscall
-
-	ret
-
-idiot_info:
-	movq $1, %rax
-        movq $1, %rdi
-        lea idiot_msg(%rip), %rsi
-        movq $idiot_len, %rdx
-        syscall
+	movb (%r10,%r8,1), %r9b
+	cmpb $0x0A, %r9b
+	jne finished
 	
+	movb $0, %r9b
+
+finished:
 	ret
 
 cls:
 	movq $1, %rax
 	movq $1, %rdi
 	lea cls_msg(%rip), %rsi
-	movq $cls_len, %rdx
+	mov $cls_len, %rdx
 	syscall
-	
-	ret
 
-restart_check:
-	movq $1, %rax
-	movq $1, %rdi
-	lea restart_msg(%rip), %rsi
-	movq $restart_len, %rdx
-	syscall
-	
-	movq $0, %rax
-	movq $0, %rdi
-	lea restart_input(%rip), %rsi
-	movq $16, %rdx
-	syscall
-	
 	ret
-exit:
+end:
 	movq $60, %rax
 	xorq %rdi, %rdi
 	syscall
 
-
 	.globl _start
 _start:
 loop:
+	call cls
 	call print_options
+	
 	call get_options
-	
-	call trim_nl_input
-	call compare_everything
-	
-	call restart_check
-	call trim_nl_restart
-	
+	call trim_options_nl
+
+	call restart_stuff
+	call trim_restart_nl
+
+restart_check:
 	lea restart_input(%rip), %r10
 	cmpb $'y', (%r10)
-	je loop
+	je restart
 	cmpb $'Y', (%r10)
-	je loop
+	je restart
 	
-	call exit
+	cmpb $'n', (%r10)
+	je exit
+	cmpb $'N', (%r10)
+	je exit
+
+	jmp dumbass
+
+dumbass:
+	call restart_stuff
+	call trim_restart_nl
+	jmp restart_check
+	
+restart:
+	jmp loop
+
+exit:
+	call end

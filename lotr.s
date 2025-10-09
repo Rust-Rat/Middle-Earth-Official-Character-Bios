@@ -1,3 +1,19 @@
+.macro PRINT msg, len
+          movq $1, %rax
+          movq $1, %rdi
+          leaq \msg(%rip), %rsi
+          movq $\len, %rdx
+          syscall
+.endm
+
+.macro READ input, len
+          movq $0, %rax
+          movq $0, %rdi
+          leaq \input(%rip), %rsi
+          movq $\len, %rdx
+          syscall
+.endm
+
 .section .data
 options_msg:
 	.asciz "Who do you want info about?\n1. Frodo\n2. Sam\n3. Gandalf\n4. Big eye man\n5. Bilbo\n6. Gollum\n"
@@ -7,7 +23,7 @@ frodo_msg:
 	frodo_len = . - frodo_msg
 sam_msg:
 	.asciz "Sam (AKA. Fat Dude).\nAlso of the Short man genus, accompanied by the furry feet. Is blonde and has maybe had a few too many breakfastses. Also a short Irish bloke.\n"
-        sam_len = . - sam_msg
+          sam_len = . - sam_msg
 gandalf_msg:
 	.asciz "Gandalf.\nNOT a short man, a big... Normal sized man I think, he likes to play around and say 'YOU SHALL NOT PASS!!' I'm pretty sure, also I think his beard looks pretty cool.\n"
 	gandalf_len = . - gandalf_msg
@@ -42,21 +58,12 @@ cls_msg:
 
 .section .text
 print_options:
-	movq $1, %rax
-	movq $1, %rdi
-	lea options_msg(%rip), %rsi
-	movq $options_len, %rdx
-	syscall
+	PRINT options_msg, options_len
 
 	ret
 
 get_options:
-	movq $0, %rax
-	movq $0, %rdi
-	lea options_input(%rip), %rsi
-	movq $16, %rdx
-	syscall
-	movq %rax, %r8 # len for trim_options_nl
+	READ options_input, 16
 
 	ret
 
@@ -125,81 +132,45 @@ idiot_call:
 	ret
 
 frodo_stuff:
-	movq $1, %rax
-	movq $1, %rdi
-	lea frodo_msg(%rip), %rsi
-	movq $frodo_len, %rdx
-	syscall
+	PRINT frodo_msg, frodo_len
 
 	ret
 
 sam_stuff:
-	movq $1, %rax
-	movq $1, %rdi
-	lea sam_msg(%rip), %rsi
-	movq $sam_len, %rdx
-	syscall
+	PRINT sam_msg, sam_len
 	
 	ret
 
 gandalf_stuff:
-	movq $1, %rax
-	movq $1, %rdi
-	lea gandalf_msg(%rip), %rsi
-	movq $gandalf_len, %rdx
-	syscall
+	PRINT gandalf_msg, gandalf_len
 
 	ret
 
 sauron_stuff:
-	movq $1, %rax
-	movq $1, %rdi
-	lea sauron_msg(%rip), %rsi
-	movq $sauron_len, %rdx
-	syscall
+	PRINT sauron_msg, sauron_len
 
 	ret
 bilbo_stuff:
-	movq $1, %rax
-	movq $1, %rdi
-	lea bilbo_msg(%rip), %rsi
-	movq $bilbo_len, %rdx
-	syscall
+	PRINT bilbo_msg, bilbo_len
 
 	ret
 
 gollum_stuff:
-	movq $1, %rax
-	movq $1, %rdi
-	lea gollum_msg(%rip), %rsi
-	movq $gollum_len, %rdx
-	syscall
+	PRINT gollum_msg, gollum_len
 
 	ret
 
 idiot_stuff:
-	movq $1, %rax
-	movq $1, %rdi
-	lea idiot_msg(%rip), %rsi
-	movq $idiot_len, %rdx
-	syscall
+	PRINT idiot_msg, idiot_len
 
 	call idiot_restart_stuff
 
 nice_restart_stuff:
-	movq $1, %rax
-	movq $1, %rdi
-	lea nice_restart_msg(%rip), %rsi
-	movq $nice_restart_len, %rdx
-	syscall
+	PRINT nice_restart_msg, nice_restart_len
 
-	movq $0, %rax
-	movq $0, %rdi
+	READ nice_restart_input, 16
 
-	lea nice_restart_input(%rip), %rsi
-	movq $16, %rdx
-	syscall
-	movq %rax, %r8
+	movq %rax, %r8 # For length when trimming newline
 
 	ret
 nice_trim_restart_nl:
@@ -217,18 +188,10 @@ nice_finished:
 	ret
 
 idiot_restart_stuff:
-	movq $1, %rax
-	movq $1, %rdi
-	lea idiot_restart_msg(%rip), %rsi
-	movq $idiot_restart_len, %rdx
-	syscall
+          PRINT idiot_restart_msg, idiot_restart_len
 	
-	movq $0, %rax
-	movq $0, %rdi
-	lea idiot_restart_input(%rip), %rsi
-	movq $16, %rdx
-	syscall
-	movq %rax, %r8
+	READ idiot_restart_input, 16
+	movq %rax, %r8 # for length when trimming newline
 
 	call idiot_trim_restart_nl
 	ret
@@ -248,11 +211,7 @@ idiot_finished:
 	ret
 	
 cls:
-	movq $1, %rax
-	movq $1, %rdi
-	lea cls_msg(%rip), %rsi
-	mov $cls_len, %rdx
-	syscall
+	PRINT cls_msg, cls_len
 
 	ret
 end:
@@ -287,18 +246,18 @@ nice_restart_check:
 	jmp nice_dumbass
 
 idiot_restart_check:
-	lea idiot_restart_input(%rip), %r10
-        cmpb $'y', (%r10)
-        je restart
-        cmpb $'Y', (%r10)
-        je restart
+          lea idiot_restart_input(%rip), %r10
+          cmpb $'y', (%r10)
+          je restart
+          cmpb $'Y', (%r10)
+          je restart
 
-        cmpb $'n', (%r10)
-        je exit
-        cmpb $'N', (%r10)
-        je exit
+          cmpb $'n', (%r10)
+          je exit
+          cmpb $'N', (%r10)
+          je exit
 
-        jmp idiot_dumbass
+          jmp idiot_dumbass
 
 nice_dumbass:
 	call nice_restart_stuff

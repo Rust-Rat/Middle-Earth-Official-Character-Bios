@@ -14,9 +14,33 @@
           syscall
 .endm
 
-.macro EXIT
+.macro TRIM_NL input, jump
+          leaq \input(%rip), %r10
+          dec %r8
+          movb (%r10,%r8,1), %r9b
+
+          cmpb $0x0A, %r9b
+          jne \jump
+
+          movb $0, (%r10,%r8,1)
+.endm
+
+.macro RESTART_CHECK buf, dumb_jump
+    lea \buf(%rip), %r10
+    cmpb $'y', (%r10)
+    je restart
+    cmpb $'Y', (%r10)
+    je restart
+    cmpb $'n', (%r10)
+    je exit
+    cmpb $'N', (%r10)
+    je exit
+    jmp \dumb_jump
+.endm
+
+.macro EXIT code=0
           movq $60, %rax
-          xorq %rdi, %rdi
+          movq $\code, %rdi
           syscall
 .endm
 
@@ -26,45 +50,56 @@
 
 .section .data
 options_msg:
+          .align 8
 	.asciz "Who do you want info about?\n1. Frodo\n2. Sam\n3. Gandalf\n4. Big eye man\n5. Bilbo\n6. Gollum\n"
 	options_len = . - options_msg
 frodo_msg:
+          .align 8
 	.asciz "Frodo.\nShort man. Furry feet (Secretly a furry). Looks 50 and 12. Short Irish bloke.\n"
 	frodo_len = . - frodo_msg
 sam_msg:
+          .align 8
 	.asciz "Sam (AKA. Fat Dude).\nAlso of the Short man genus, accompanied by the furry feet. Is blonde and has maybe had a few too many breakfastses. Also a short Irish bloke.\n"
           sam_len = . - sam_msg
 gandalf_msg:
+          .align 8
 	.asciz "Gandalf.\nNOT a short man, a big... Normal sized man I think, he likes to play around and say 'YOU SHALL NOT PASS!!' I'm pretty sure, also I think his beard looks pretty cool.\n"
 	gandalf_len = . - gandalf_msg
 sauron_msg:
+          .align 8
 	.asciz "Sauron.\nBIG EYE MAN. he's just this big plague infested eye, his name is SIIICCK though. I don't know what an eye can do though, I feel like it would just self destruct.\n"
 	sauron_len = . - sauron_msg
 bilbo_msg:
+          .align 8
 	.asciz "Bilbo.\nDumbass name; \"ooo my name is Bilbo\", man SHUT UP!!! I don't even know what he looks like, like an old greasy man I think. And he has some ring that he probably stole.\n"
 	bilbo_len = . - bilbo_msg
 gollum_msg:
+          .align 8
 	.asciz "Gollum.\nHim and Dobby scared the shit out of me when I was younger. He looks like if a pug became human: Slimy as hell and MASSIVE eyes.\nAh also, his game sucks\n"
 	gollum_len = . - gollum_msg
 idiot_msg:
+          .align 8
 	.asciz "TYPE ONE OF THE GOD DAMN NUMBERS!!!!!!\n"
 	idiot_len = . - idiot_msg
 
 nice_restart_msg:
+          .align 8
 	.asciz "Do you wish to be enlightened once more? (y/n): "
 	nice_restart_len = . - nice_restart_msg
 idiot_restart_msg:
+          .align 8
 	.asciz "God DAMN it, wanna try again you absolute idiot?! (y/n): "
 	idiot_restart_len = . - idiot_restart_msg
 
 cls_msg:
+          .align 8
 	.asciz "\033[H\033[2J"
 	cls_len = . - cls_msg
 
 .section .bss
-	.lcomm options_input, 16
-	.lcomm nice_restart_input, 16
-	.lcomm idiot_restart_input, 16
+	.lcomm options_input, 16       #
+	.lcomm nice_restart_input, 16  # IF THE USER OVERFLOWS IT, THEY'RE FAULT
+	.lcomm idiot_restart_input, 16 #
 
 .section .text
 print_options:
@@ -74,20 +109,12 @@ print_options:
 
 get_options:
 	READ options_input, 16
+          movq %rax, %r8
 
 	ret
 
 trim_options_nl:
-	lea options_input(%rip), %r10
-	dec %r8
-	
-	movb (%r10,%r8,1), %r9b
-	cmpb $0x0A, %r9b
-	je call_check_options
-	
-	movb $0, %r9b
-	dec %r8
-	jmp call_check_options
+          TRIM_NL options_input, call_check_options
 
 call_check_options:
 	call check_options
@@ -179,23 +206,14 @@ nice_restart_stuff:
 	PRINT nice_restart_msg, nice_restart_len
 
 	READ nice_restart_input, 16
-
 	movq %rax, %r8 # For length when trimming newline
 
 	ret
 nice_trim_restart_nl:
-	lea nice_restart_input(%rip), %r10
-	dec %r8 # r8 = \0; - 1 r8 = last_char
-	
-	movb (%r10,%r8,1), %r9b
-	cmpb $0x0A, %r9b
-	jne nice_finished
-	
-	movb $0, %r9b
+	TRIM_NL nice_restart_input, nice_finished 
 
 nice_finished:
 	jmp nice_restart_check
-	ret
 
 idiot_restart_stuff:
           PRINT idiot_restart_msg, idiot_restart_len
@@ -204,21 +222,12 @@ idiot_restart_stuff:
 	movq %rax, %r8 # for length when trimming newline
 
 	call idiot_trim_restart_nl
-	ret
 
 idiot_trim_restart_nl:
-	lea idiot_restart_input(%rip), %r10
-	dec %r8
-
-	movb (%r10,%r8,1), %r9b
-	cmpb $0x0A, %r9b
-	jmp idiot_finished
-
-	movb $0, %r9b
-	
+          TRIM_NL idiot_restart_input, idiot_finished
+          
 idiot_finished:
-	jmp idiot_restart_check
-	ret
+          jmp idiot_restart_check
 	
 	.globl _start
 _start:
@@ -233,32 +242,9 @@ loop:
 	call nice_trim_restart_nl
 
 nice_restart_check:
-	lea nice_restart_input(%rip), %r10
-	cmpb $'y', (%r10)
-	je restart
-	cmpb $'Y', (%r10)
-	je restart
-	
-	cmpb $'n', (%r10)
-	je exit
-	cmpb $'N', (%r10)
-	je exit
-
-	jmp nice_dumbass
-
+          RESTART_CHECK nice_restart_input, nice_dumbass
 idiot_restart_check:
-          lea idiot_restart_input(%rip), %r10
-          cmpb $'y', (%r10)
-          je restart
-          cmpb $'Y', (%r10)
-          je restart
-
-          cmpb $'n', (%r10)
-          je exit
-          cmpb $'N', (%r10)
-          je exit
-
-          jmp idiot_dumbass
+          RESTART_CHECK idiot_restart_input, idiot_dumbass
 
 nice_dumbass:
 	call nice_restart_stuff
@@ -267,11 +253,11 @@ nice_dumbass:
 idiot_dumbass:
 	call idiot_restart_stuff
 	call idiot_trim_restart_nl
-	jmp idiot_restart_check
+          jmp idiot_restart_check
 
 restart:
 	jmp loop
 
 exit:
-	EXIT
+	EXIT 0
 

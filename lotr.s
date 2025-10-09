@@ -14,6 +14,16 @@
           syscall
 .endm
 
+.macro EXIT
+          movq $60, %rax
+          xorq %rdi, %rdi
+          syscall
+.endm
+
+.macro CLS
+          PRINT cls_msg, cls_len
+.endm
+
 .section .data
 options_msg:
 	.asciz "Who do you want info about?\n1. Frodo\n2. Sam\n3. Gandalf\n4. Big eye man\n5. Bilbo\n6. Gollum\n"
@@ -210,19 +220,10 @@ idiot_finished:
 	jmp idiot_restart_check
 	ret
 	
-cls:
-	PRINT cls_msg, cls_len
-
-	ret
-end:
-	movq $60, %rax
-	xorq %rdi, %rdi
-	syscall
-
 	.globl _start
 _start:
 loop:
-	call cls
+          CLS
 	call print_options
 	
 	call get_options
@@ -272,5 +273,5 @@ restart:
 	jmp loop
 
 exit:
-	call end
+	EXIT
 

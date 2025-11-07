@@ -21,6 +21,10 @@ And then after I thought of it I just wanted to get it to work, and kept buildin
 - Read LOTR, then remake it with real bios.
 - After that add all of the characters and let you type the name instead of a number.
 
+## How to build and run it
+Totally forgot this to be completely honest; just assemble, link and run it. 
+I know, very helpfull
+
 ## Other notes.
 - I PROMISE I figured everything else out except for the newline trick
 
